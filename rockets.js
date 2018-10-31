@@ -10,7 +10,7 @@ canvas.width = W;
 canvas.height = H;
 
 const POPULATION_SIZE = 100;
-const MUTATION_CHANCE = 0.005;
+const MUTATION_CHANCE = 0.01;
 
 const ROCKET_LIFESPAN = 250;
 const ROCKET_START_VELOCITY = 1;
@@ -72,7 +72,7 @@ class RocketDNA {
 class RocketsPopulation {
   constructor() {
     this.items = new Array(POPULATION_SIZE);
-    this.generation = 1;
+    this.generation = 0;
     this.maxFitness = 0;
 
     for (var i = 0; i < POPULATION_SIZE; i += 1) {
@@ -168,6 +168,9 @@ var obstacles = [
 
 var currentFrame = 0;
 var ticktimeout = null;
+var bestTime = Infinity;
+var lastRocketTime = Infinity;
+
 function tick() {
   ctx.fillStyle = '#000';
   ctx.fillRect(0, 0, W, H);
@@ -204,12 +207,22 @@ function tick() {
         return sum;
       }, 0)
     );
-    console.log('best time:', (rockets.best() || {}).landedAt || Infinity);
+
+    var bestRocketTime = (rockets.best() || {}).landedAt || Infinity;
+    lastRocketTime = bestRocketTime;
+
+    if (bestRocketTime < bestTime) bestTime = bestRocketTime;
 
     rockets.breed();
 
     currentFrame = 1;
   }
+
+  ctx.fillStyle = '#fff';
+  ctx.font = 'normal 16px monospace';
+  ctx.fillText(`generation: ${rockets.generation}`, 5, H - 45);
+  ctx.fillText(`last hit time: ${lastRocketTime}`, 5, H - 25);
+  ctx.fillText(`best hit time: ${bestTime}`, 5, H - 5);
 
   // fitnessMap();
 

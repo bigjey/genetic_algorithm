@@ -121,7 +121,7 @@ class Rocket {
     }
 
     if (this.landed) {
-      this.fitness += 5000;
+      this.fitness += 2000;
       this.fitness += (ROCKET_LIFESPAN / this.landedAt) * 200;
     }
 
