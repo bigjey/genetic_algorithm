@@ -117,36 +117,40 @@ class WordsPopulation {
 
 // #1 Genetic Alghoritm
 
-// console.time('time');
-// var results = [];
-// var TRIES = 1;
+console.time('time');
+var results = [];
+var CYCLES = 10;
+var MAX_GENERATIONS = 1e5;
 
-// let p;
-// for (var i = 0; i < TRIES; i++) {
-//   p = new WordsPopulation();
-//   while (p.maxFitness < 1) {
-//     p.breed();
-//   }
+let p;
+for (var i = 0; i < CYCLES; i++) {
+  p = new WordsPopulation();
+  while (p.maxFitness < 1 && p.generation < MAX_GENERATIONS) {
+    p.breed();
+  }
 
-//   results.push(p.generation);
-// }
-// console.timeEnd('time');
+  results.push(p.generation);
+}
+console.timeEnd('time');
 
-// console.log(results.reduce((sum, a) => sum + a) / results.length);
-// console.log(p.best().genes.join(''));
+console.log(
+  `avg generations (${CYCLES} cycles): `,
+  results.reduce((sum, a) => sum + a) / results.length
+);
+console.log('closest result:', p.best().genes.join(''));
 
 // #2 Pure random
 
-console.time('time');
-var TRIES = 2e7;
-for (var i = 0; i < TRIES; i += 1) {
-  var arr = new Array(GENOME_LENGTH);
-  for (var j = 0; j < GENOME_LENGTH; j += 1) {
-    arr[j] = randomGene();
-  }
-  if (arr.join('') === ANSWER) {
-    console.log(i, arr);
-    break;
-  }
-}
-console.timeEnd('time');
+// console.time('time');
+// var TRIES = 2e7;
+// for (var i = 0; i < TRIES; i += 1) {
+//   var arr = new Array(GENOME_LENGTH);
+//   for (var j = 0; j < GENOME_LENGTH; j += 1) {
+//     arr[j] = randomGene();
+//   }
+//   if (arr.join('') === ANSWER) {
+//     console.log(i, arr);
+//     break;
+//   }
+// }
+// console.timeEnd('time');
