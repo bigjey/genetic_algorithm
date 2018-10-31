@@ -1,5 +1,6 @@
 const ROCKET_W = 6;
 const ROCKET_H = 6;
+
 class Rocket {
   constructor(x, y, dna) {
     this.pos = {
