@@ -45,6 +45,7 @@ class Rocket {
       ) {
         this.move = false;
         this.crashed = true;
+        // this.landedAt = frame;
 
         return;
       }
@@ -63,8 +64,9 @@ class Rocket {
 
         if (!(r1 < l2 || b1 < t2 || t1 > b2 || l1 > r2)) {
           this.move = false;
-          // this.crashed = true;
+          this.crashed = true;
           this.crashedO = true;
+          // this.landedAt = frame;
         }
       }
 
@@ -115,12 +117,12 @@ class Rocket {
     }
 
     if (this.crashed) {
-      this.fitness -= 150;
+      this.fitness -= 80;
     }
 
     if (this.landed) {
-      this.fitness += 1000;
-      this.fitness += (this.landedAt / ROCKET_LIFESPAN) * 1000;
+      this.fitness += 5000;
+      this.fitness += (ROCKET_LIFESPAN / this.landedAt) * 200;
     }
 
     if (!this.crashed && this.pos.y > obstacles[0].y) {

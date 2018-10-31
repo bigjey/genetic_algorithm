@@ -10,11 +10,11 @@ canvas.width = W;
 canvas.height = H;
 
 const POPULATION_SIZE = 100;
-const MUTATION_CHANCE = 0.02;
+const MUTATION_CHANCE = 0.005;
 
-const ROCKET_LIFESPAN = 400;
-const ROCKET_START_VELOCITY = 2;
-const ROCKET_MAX_VELOCITY = 5;
+const ROCKET_LIFESPAN = 250;
+const ROCKET_START_VELOCITY = 1;
+const ROCKET_MAX_VELOCITY = 6;
 const ROCKET_LAND_BONUS = 1000;
 const ROCKET_CRASH_PENALTY = 400;
 
@@ -42,18 +42,6 @@ class RocketDNA {
         this.genes[i] = randomRocketGene();
       }
     }
-
-    // console.log(this.genes.length);
-
-    // this.fitness = this.calculateFitness();
-  }
-
-  calculateFitness() {
-    // var matches = 0;
-    // for (var i = 0; i < ROCKET_LIFESPAN; i += 1) {
-    //   if (this.genes[i] === ANSWER[i]) matches += 1;
-    // }
-    // return matches / ROCKET_LIFESPAN;
   }
 
   crossover(otherDNA) {
@@ -101,7 +89,7 @@ class RocketsPopulation {
       .sort((a, b) => b.fitness - a.fitness)
       .slice(0, POPULATION_SIZE * 0.6);
 
-    var minFitness = selection.reduce(
+    this.minFitness = selection.reduce(
       (min, rocket) => (rocket.fitness < min ? rocket.fitness : min),
       Infinity
     );
@@ -110,14 +98,16 @@ class RocketsPopulation {
       selection.reduce(
         (max, rocket) => (rocket.fitness > max ? rocket.fitness : max),
         0
-      ) - minFitness;
+      ) - this.minFitness;
 
     var pool = [];
     for (var i = 0; i < selection.length; i += 1) {
       var chance =
         this.maxFitness == 0
           ? 1
-          : (((selection[i].fitness - minFitness) / this.maxFitness) * 100) | 0;
+          : (((selection[i].fitness - this.minFitness) / this.maxFitness) *
+              100) |
+            0;
       for (var j = 0; j < chance; j += 1) {
         pool.push(i);
       }
@@ -143,7 +133,19 @@ class RocketsPopulation {
   }
 
   best() {
-    return this.items.find((i) => i.fitness >= this.maxFitness);
+    var bestRocket = null;
+    var bestTime = Infinity;
+
+    this.items.forEach((rocket) => {
+      let landedAt = rocket.landedAt || Infinity;
+
+      if (landedAt < bestTime) {
+        bestTime = landedAt;
+        bestRocket = rocket;
+      }
+    });
+
+    return bestRocket;
   }
 }
 
@@ -202,6 +204,7 @@ function tick() {
         return sum;
       }, 0)
     );
+    console.log('best time:', (rockets.best() || {}).landedAt || Infinity);
 
     rockets.breed();
 
