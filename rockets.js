@@ -1,22 +1,37 @@
-var canvas = document.createElement('canvas');
-var ctx = canvas.getContext('2d');
+var canvas = document.createElement("canvas");
+var ctx = canvas.getContext("2d");
 
-var W = 600;
-var H = 600;
+var trails = document.createElement("canvas");
+var trailsCtx = trails.getContext("2d");
 
-document.body.appendChild(canvas);
+var W = 800;
+var H = 800;
 
 canvas.width = W;
 canvas.height = H;
 
-const POPULATION_SIZE = 100;
-const MUTATION_CHANCE = 0.01;
+trails.width = W;
+trails.height = H;
 
-const ROCKET_LIFESPAN = 250;
+document.body.appendChild(trails);
+document.body.appendChild(canvas);
+
+trailsCtx.fillStyle = "#000";
+trailsCtx.fillRect(0, 0, W, H);
+
+const POPULATION_SIZE = 100;
+const MUTATION_CHANCE = 0.001;
+
+const ROCKET_LIFESPAN = 300;
 const ROCKET_START_VELOCITY = 1;
-const ROCKET_MAX_VELOCITY = 6;
+const ROCKET_MAX_VELOCITY = 3;
 const ROCKET_LAND_BONUS = 1000;
 const ROCKET_CRASH_PENALTY = 400;
+
+const rocketSpawn = {
+  x: W / 2,
+  y: H - 50
+};
 
 function randomRocketGene() {
   var x = Math.random() * (ROCKET_START_VELOCITY * 2) - ROCKET_START_VELOCITY;
@@ -46,14 +61,15 @@ class RocketDNA {
 
   crossover(otherDNA) {
     var crossedGenes = new Array(ROCKET_LIFESPAN);
+
     for (var i = 0; i < ROCKET_LIFESPAN; i += 1) {
-      if (i % 2 === 0) {
-        crossedGenes[i] = this.genes[i];
-      } else {
+      if (i % 5 === 0) {
         crossedGenes[i] = otherDNA.genes[i];
+      } else {
+        crossedGenes[i] = this.genes[i];
       }
 
-      if (Math.random() < MUTATION_CHANCE) {
+      if (i > ROCKET_LIFESPAN / 2 && Math.random() < MUTATION_CHANCE) {
         crossedGenes[i] = randomRocketGene();
       }
     }
@@ -76,7 +92,7 @@ class RocketsPopulation {
     this.maxFitness = 0;
 
     for (var i = 0; i < POPULATION_SIZE; i += 1) {
-      var dna = new Rocket(W / 2, H - 50);
+      var dna = new Rocket(rocketSpawn.x, rocketSpawn.y);
 
       if (dna.fitness > this.maxFitness) this.maxFitness = dna.fitness;
 
@@ -86,8 +102,19 @@ class RocketsPopulation {
 
   breed() {
     var selection = this.items
-      .sort((a, b) => b.fitness - a.fitness)
-      .slice(0, POPULATION_SIZE * 0.6);
+      .filter((a) => !isNaN(a.fitness) && a.fitness > 0)
+      .sort((a, b) => b.fitness - a.fitness);
+
+    selection = selection.slice(
+      0,
+      Math.min(POPULATION_SIZE / 5, selection.length / 3)
+    );
+
+    // console.log(selection.map((a) => a.fitness));
+
+    console.log(
+      selection.reduce((sum, a) => sum + a.fitness, 0) / selection.length
+    );
 
     this.minFitness = selection.reduce(
       (min, rocket) => (rocket.fitness < min ? rocket.fitness : min),
@@ -124,7 +151,7 @@ class RocketsPopulation {
 
       var newDNA = A.dna.crossover(B.dna);
 
-      nextPopulation[i] = new Rocket(W / 2, H - 50, newDNA);
+      nextPopulation[i] = new Rocket(rocketSpawn.x, rocketSpawn.y);
     }
 
     this.generation += 1;
@@ -153,15 +180,15 @@ var rockets = new Array(50).fill(0).map((_) => new Rocket(W / 2, H - 50));
 var rockets = new RocketsPopulation();
 var target = {
   x: W / 2,
-  y: 50,
+  y: 80,
   r: 30
 };
 
 var obstacles = [
   {
-    x: 300,
-    y: 300,
-    w: 400,
+    x: W / 2,
+    y: H / 2 - 50,
+    w: W * 0.6,
     h: 20
   }
 ];
@@ -171,11 +198,13 @@ var ticktimeout = null;
 var bestTime = Infinity;
 var lastRocketTime = Infinity;
 
-function tick() {
-  ctx.fillStyle = '#000';
-  ctx.fillRect(0, 0, W, H);
+trailsCtx.fillStyle = "rgba(255,255,255,.05)";
 
-  ctx.fillStyle = 'rgba(255,255,255,0.4)';
+function tick() {
+  ctx.fillStyle = "#000";
+  ctx.clearRect(0, 0, W, H);
+
+  ctx.fillStyle = "#999";
   // ctx.fillStyle = "#000";
 
   ctx.beginPath();
@@ -187,10 +216,12 @@ function tick() {
     ctx.fillRect(o.x - o.w / 2, o.y - o.h / 2, o.w, o.h);
   });
 
-  ctx.fillStyle = 'rgba(255,255,255,0.6)';
+  ctx.fillStyle = "rgba(255,255,255,0.6)";
   rockets.items.forEach((r) => {
     r.update(currentFrame);
     r.draw();
+
+    trailsCtx.fillRect(r.pos.x, r.pos.y, 1, 1);
   });
 
   currentFrame += 1;
@@ -199,7 +230,7 @@ function tick() {
     rockets.items.forEach((r) => r.evaluate());
 
     console.log(
-      'hit count',
+      "hit count",
       rockets.items.reduce((sum, rocket) => {
         if (rocket.landed) {
           sum++;
@@ -218,8 +249,8 @@ function tick() {
     currentFrame = 1;
   }
 
-  ctx.fillStyle = '#fff';
-  ctx.font = 'normal 16px monospace';
+  ctx.fillStyle = "#fff";
+  ctx.font = "normal 16px monospace";
   ctx.fillText(`generation: ${rockets.generation}`, 5, H - 45);
   ctx.fillText(`last hit time: ${lastRocketTime}`, 5, H - 25);
   ctx.fillText(`best hit time: ${bestTime}`, 5, H - 5);
