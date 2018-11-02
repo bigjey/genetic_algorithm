@@ -1,11 +1,13 @@
-var canvas = document.createElement("canvas");
-var ctx = canvas.getContext("2d");
+var canvas = document.createElement('canvas');
+var ctx = canvas.getContext('2d');
 
-var trails = document.createElement("canvas");
-var trailsCtx = trails.getContext("2d");
+var trails = document.createElement('canvas');
+var trailsCtx = trails.getContext('2d');
 
 var W = 800;
 var H = 800;
+
+var grid = new Array(H);
 
 canvas.width = W;
 canvas.height = H;
@@ -16,35 +18,25 @@ trails.height = H;
 document.body.appendChild(trails);
 document.body.appendChild(canvas);
 
-trailsCtx.fillStyle = "#000";
+trailsCtx.fillStyle = '#000';
 trailsCtx.fillRect(0, 0, W, H);
 
 const POPULATION_SIZE = 100;
 const MUTATION_CHANCE = 0.001;
 
 const ROCKET_LIFESPAN = 300;
-const ROCKET_START_VELOCITY = 1;
-const ROCKET_MAX_VELOCITY = 3;
+const ROCKET_START_VELOCITY = 2;
+const ROCKET_MAX_VELOCITY = 5;
 const ROCKET_LAND_BONUS = 1000;
 const ROCKET_CRASH_PENALTY = 400;
 
 const rocketSpawn = {
   x: W / 2,
-  y: H - 50
+  y: H - 20
 };
 
 function randomRocketGene() {
-  var x = Math.random() * (ROCKET_START_VELOCITY * 2) - ROCKET_START_VELOCITY;
-  var y =
-    Math.sqrt(ROCKET_START_VELOCITY * ROCKET_START_VELOCITY - x * x) *
-    (Math.random() > 0.5 ? 1 : -1);
-
-  var acc = {
-    x,
-    y
-  };
-
-  return acc;
+  return ((Math.random() * 20 - 10) * Math.PI) / 180;
 }
 
 class RocketDNA {
@@ -63,13 +55,13 @@ class RocketDNA {
     var crossedGenes = new Array(ROCKET_LIFESPAN);
 
     for (var i = 0; i < ROCKET_LIFESPAN; i += 1) {
-      if (i % 5 === 0) {
+      if (i % 10 === 0) {
         crossedGenes[i] = otherDNA.genes[i];
       } else {
         crossedGenes[i] = this.genes[i];
       }
 
-      if (i > ROCKET_LIFESPAN / 2 && Math.random() < MUTATION_CHANCE) {
+      if (Math.random() < MUTATION_CHANCE) {
         crossedGenes[i] = randomRocketGene();
       }
     }
@@ -101,40 +93,25 @@ class RocketsPopulation {
   }
 
   breed() {
-    var selection = this.items
-      .filter((a) => !isNaN(a.fitness) && a.fitness > 0)
-      .sort((a, b) => b.fitness - a.fitness);
+    var selection = this.items.sort((a, b) => a.fitness - b.fitness);
 
-    selection = selection.slice(
-      0,
-      Math.min(POPULATION_SIZE / 5, selection.length / 3)
-    );
+    selection = selection.slice(0, 10);
 
-    // console.log(selection.map((a) => a.fitness));
+    var maxFitness = 0;
+    for (var i = 0; i < selection.length; i++) {
+      if (selection[i].fitness > maxFitness) {
+        maxFitness = selection[i].fitness;
+      }
+    }
+    maxFitness += 10;
 
-    console.log(
-      selection.reduce((sum, a) => sum + a.fitness, 0) / selection.length
-    );
-
-    this.minFitness = selection.reduce(
-      (min, rocket) => (rocket.fitness < min ? rocket.fitness : min),
-      Infinity
-    );
-
-    this.maxFitness =
-      selection.reduce(
-        (max, rocket) => (rocket.fitness > max ? rocket.fitness : max),
-        0
-      ) - this.minFitness;
+    console.log(selection.map((s) => s.fitness));
 
     var pool = [];
     for (var i = 0; i < selection.length; i += 1) {
-      var chance =
-        this.maxFitness == 0
-          ? 1
-          : (((selection[i].fitness - this.minFitness) / this.maxFitness) *
-              100) |
-            0;
+      var chance = ((maxFitness - selection[i].fitness) / maxFitness) * 1000;
+      console.log(chance);
+
       for (var j = 0; j < chance; j += 1) {
         pool.push(i);
       }
@@ -186,11 +163,17 @@ var target = {
 
 var obstacles = [
   {
-    x: 0,
+    x: W * 0.35,
     y: H / 2 - 50,
-    w: W * 0.6,
+    w: W * 0.9,
     h: 20
   }
+  // {
+  //   x: W * 0.65,
+  //   y: H / 2 + 150,
+  //   w: W * 0.9,
+  //   h: 20
+  // }
 ];
 
 var currentFrame = 0;
@@ -198,13 +181,104 @@ var ticktimeout = null;
 var bestTime = Infinity;
 var lastRocketTime = Infinity;
 
-trailsCtx.fillStyle = "rgba(255,255,255,.05)";
+trailsCtx.fillStyle = 'rgba(255,255,255,.05)';
+
+var queue = [];
+
+for (var y = 0; y < H; y++) {
+  grid[y] = new Array(W);
+
+  for (var x = 0; x < W; x++) {
+    grid[y][x] = {
+      y,
+      x,
+      visited: false,
+      weight: 0,
+      obstacleWeight: 0,
+      target: false
+    };
+  }
+}
+
+var maxWeight = 0;
+
+grid[target.y][target.x].target = true;
+grid[target.y][target.x].visited = true;
+
+obstacles.forEach((o) => {
+  for (var y = o.y - o.h / 2; y < o.y + o.h / 2; y++) {
+    for (var x = o.x - o.w / 2; x < o.x + o.w / 2; x++) {
+      var yy = Math.floor(y);
+      var xx = Math.floor(x);
+
+      if (yy < 0 || yy > H - 1 || xx < 0 || xx > W - 1) {
+        continue;
+      }
+
+      let el = grid[yy][xx];
+
+      el.obstacle = true;
+      el.obstacleWeight = 100;
+    }
+  }
+});
+
+queue.push(grid[target.y][target.x]);
+
+function processQueue() {
+  let el = queue.shift();
+
+  if (el) {
+    el.visited = true;
+
+    for (var yy = el.y - 1; yy <= el.y + 1; yy++) {
+      for (var xx = el.x - 1; xx <= el.x + 1; xx++) {
+        if (
+          yy < 0 ||
+          yy > H - 1 ||
+          xx < 0 ||
+          xx > W - 1 ||
+          grid[yy][xx].visited ||
+          queue.includes(grid[yy][xx]) ||
+          grid[yy][xx].obstacle
+        ) {
+          continue;
+        }
+
+        var d = Math.sqrt(Math.pow(yy - el.y, 2) + Math.pow(xx - el.x, 2));
+
+        grid[yy][xx].weight = el.weight + d;
+
+        if (grid[yy][xx].weight + grid[yy][xx].obstacleWeight > maxWeight) {
+          maxWeight = grid[yy][xx].weight;
+        }
+
+        queue.push(grid[yy][xx]);
+      }
+    }
+  }
+}
+
+function inObstacle(x, y) {
+  return obstacles.some((o) => {
+    var t = o.y - o.h / 2;
+    var b = o.y + o.h / 2;
+    var l = o.x - o.w / 2;
+    var r = o.x + o.w / 2;
+
+    return !(x < l || x > r || y < t || y > b);
+  });
+}
+
+while (queue.length) {
+  processQueue();
+}
 
 function tick() {
-  ctx.fillStyle = "#000";
+  ctx.fillStyle = '#000';
   ctx.clearRect(0, 0, W, H);
 
-  ctx.fillStyle = "#999";
+  ctx.fillStyle = '#999';
   // ctx.fillStyle = "#000";
 
   ctx.beginPath();
@@ -216,7 +290,7 @@ function tick() {
     ctx.fillRect(o.x - o.w / 2, o.y - o.h / 2, o.w, o.h);
   });
 
-  ctx.fillStyle = "rgba(255,255,255,0.6)";
+  ctx.fillStyle = 'rgba(255,255,255,0.6)';
   rockets.items.forEach((r) => {
     r.update(currentFrame);
     r.draw();
@@ -230,7 +304,7 @@ function tick() {
     rockets.items.forEach((r) => r.evaluate());
 
     console.log(
-      "hit count",
+      'hit count',
       rockets.items.reduce((sum, rocket) => {
         if (rocket.landed) {
           sum++;
@@ -249,13 +323,14 @@ function tick() {
     currentFrame = 1;
   }
 
-  ctx.fillStyle = "#fff";
-  ctx.font = "normal 16px monospace";
+  ctx.fillStyle = '#fff';
+  ctx.font = 'normal 16px monospace';
   ctx.fillText(`generation: ${rockets.generation}`, 5, H - 45);
   ctx.fillText(`last hit time: ${lastRocketTime}`, 5, H - 25);
   ctx.fillText(`best hit time: ${bestTime}`, 5, H - 5);
 
   // fitnessMap();
+  // distanceMap();
 
   ticktimeout = setTimeout(tick, 1000 / 100);
 }
@@ -338,4 +413,37 @@ function fitnessMap() {
   }
 }
 
+function distanceMap() {
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, W, H);
+
+  for (var y = 0; y < H; y++) {
+    for (var x = 0; x < W; x++) {
+      if (grid[y][x].target) {
+        ctx.fillStyle = 'blue';
+        ctx.fillRect(x, y, 1, 1);
+      } else if (grid[y][x].visited) {
+        var w = grid[y][x].weight + grid[y][x].obstacleWeight;
+
+        let hue = w / maxWeight;
+
+        ctx.fillStyle = `hsl(${90 - 90 * hue}, 60%, 50%)`;
+        ctx.fillRect(x, y, 1, 1);
+      } else if (queue.includes(grid[y][x])) {
+        ctx.fillStyle = 'blue';
+        ctx.fillRect(x, y, 1, 1);
+      }
+    }
+  }
+}
+
 tick();
+
+canvas.addEventListener('mousemove', ({ clientX, clientY }) => {
+  // console.log(clientY, clientX);
+  console.log(
+    grid[clientY][clientX].obstacle
+      ? grid[clientY + obstacles[0].h][clientX].weight
+      : grid[clientY][clientX].weight
+  );
+});

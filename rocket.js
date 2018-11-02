@@ -10,7 +10,7 @@ class Rocket {
 
     this.vel = {
       x: 0,
-      y: 0
+      y: -1
     };
 
     var x = 0;
@@ -26,24 +26,17 @@ class Rocket {
   }
 
   update(frame) {
-    if (this.vel.x === 0 && this.vel.y === 0) {
-      this.vel.x = this.acc.x;
-      this.vel.y = this.acc.y;
-    }
-
     if (this.move) {
-      var newDir = new Vector2(
-        this.dna.genes[frame].x,
-        this.dna.genes[frame].y
-      );
+      // var newDir = new Vector2(
+      //   this.dna.genes[frame].x,
+      //   this.dna.genes[frame].y
+      // );
 
       var v = new Vector2(this.vel.x, this.vel.y);
 
-      var angle = v.angleBetween(newDir);
+      var angle = this.dna.genes[frame];
 
-      // var a = (Math.random() * 4 - 2) * (Math.PI / 180);
-
-      var vv = v.rotate(angle / 20);
+      var vv = v.rotate(angle);
 
       this.vel.x = vv.x * 1.1;
       this.vel.y = vv.y * 1.1;
@@ -87,7 +80,7 @@ class Rocket {
 
         if (!(r1 < l2 || b1 < t2 || t1 > b2 || l1 > r2)) {
           this.move = false;
-          this.crashed = true;
+          // this.crashed = true;
           this.crashedO = true;
           // this.landedAt = frame;
         }
@@ -111,8 +104,6 @@ class Rocket {
     const v = new Vector2(this.vel.x, this.vel.y);
     const angle = v.angleBetween(Vector2.right);
 
-    // console.log(v, angle / (Math.PI / 180));
-
     ctx.save();
 
     ctx.translate(this.pos.x, this.pos.y);
@@ -134,46 +125,33 @@ class Rocket {
   }
 
   evaluate() {
-    this.fitness = 1000;
-
-    var d = Math.sqrt(
-      Math.pow(target.x - this.pos.x, 2) + Math.pow(target.y - this.pos.y, 2)
-    );
-    this.fitness -= d;
+    var x = this.pos.x;
+    var y = this.pos.y;
 
     if (this.crashedO) {
-      this.fitness -= 200;
-
-      var diff = 0;
-
-      if (this.pos.x < W / 2) {
-        diff = this.pos.x - obstacles[0].x + obstacles[0].w / 2;
-      } else {
-        diff = obstacles[0].x + obstacles[0].w / 2 - this.pos.x;
-      }
-
-      if (this.pos.y < obstacles[0].y) {
-        this.fitness -= obstacles[0].w / 2 - diff;
-      } else {
-        this.fitness -= diff + 50;
-      }
+      y += 50;
     }
 
-    if (this.crashed) {
-      if (this.pos.y < obstacles[0].y) {
-        this.fitness += 100;
-      } else {
-        this.fitness -= 100;
-      }
+    if (x < 0) {
+      x = 0;
     }
+
+    if (x > W - 1) {
+      x = W - 1;
+    }
+
+    if (y < 0) {
+      y = 0;
+    }
+
+    if (y > H - 1) {
+      y = H - 1;
+    }
+
+    this.fitness = grid[y | 0][x | 0].weight;
 
     if (this.landed) {
-      this.fitness += 300;
-      this.fitness += (this.landedAt / ROCKET_LIFESPAN) * 300;
-    }
-
-    if (!this.crashedO && !this.crashed && this.pos.y > obstacles[0].y) {
-      this.fitness += 200;
+      this.fitness += 1000;
     }
   }
 }
