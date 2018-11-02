@@ -186,7 +186,7 @@ var target = {
 
 var obstacles = [
   {
-    x: W / 2,
+    x: 0,
     y: H / 2 - 50,
     w: W * 0.6,
     h: 20
